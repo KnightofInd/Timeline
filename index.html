@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hackathon & Test Prep Timeline</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+        }
+        .timeline {
+            position: relative;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 0;
+        }
+        .timeline::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            background-color: #00ff00;
+            top: 0;
+            bottom: 0;
+            left: 75%;
+            margin-left: -3px;
+        }
+        .container {
+            padding: 10px 40px;
+            position: relative;
+            background-color: inherit;
+            width: 50%;
+        }
+        .container::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #00ff00;
+            border: 4px solid #1a1a1a;
+            top: 15px;
+            border-radius: 70%;
+            z-index: 1;
+        }
+        .left {
+            left: 0;
+        }
+        .right {
+            left: 50%;
+        }
+        .left::after {
+            right: -10px;
+        }
+        .right::after {
+            left: -10px;
+        }
+        .content {
+            padding: 20px 30px;
+            background-color: #2a2a2a;
+            position: relative;
+            border-radius: 6px;
+            margin-left: -30rem;
+    margin-right: -10rem;
+        }
+        .left .content {
+    margin-right: -73px;
+}
+        .right .content {
+            margin-left: 20px;
+        }
+        .add-task, .add-photo {
+            cursor: pointer;
+        }
+        .task-image {
+            max-width: 100%;
+            height: auto;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        @media screen and (max-width: 600px) {
+            .timeline::after {
+                left: 31px;
+            }
+            .container {
+                width: 100%;
+                padding-left: 70px;
+                padding-right: 25px;
+            }
+            .container::before {
+                left: 60px;
+                border: medium solid #00ff00;
+                border-width: 10px 10px 10px 0;
+                border-color: transparent #00ff00 transparent transparent;
+            }
+            .left::after, .right::after {
+                left: 21px;
+            }
+            .right {
+                left: 0%;
+            }
+            .left .content, .right .content {
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-5">Hackathon & Test Prep Timeline</h1>
+        <div class="timeline" id="timeline">
+            <!-- Timeline items will be added here dynamically -->
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const timeline = document.getElementById('timeline');
+        const startDate = new Date();
+        const endDate = new Date(startDate.getTime() + (60 * 24 * 60 * 60 * 1000)); // 60 days from now
+
+        let tasks = JSON.parse(localStorage.getItem('hackathonTasks')) || {};
+
+        function saveTasks() {
+            localStorage.setItem('hackathonTasks', JSON.stringify(tasks));
+        }
+
+        function createTimelineItem(date, isEven) {
+            const container = document.createElement('div');
+            container.className = `container ${isEven ? 'left' : 'right'}`;
+
+            const content = document.createElement('div');
+            content.className = 'content';
+            
+            const dateElement = document.createElement('h2');
+            dateElement.textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            
+            const taskList = document.createElement('ul');
+            taskList.className = 'list-group list-group-flush';
+            
+            const dateString = date.toISOString().split('T')[0];
+            if (tasks[dateString]) {
+                tasks[dateString].forEach(task => {
+                    const taskItem = document.createElement('li');
+                    taskItem.className = 'list-group-item bg-dark text-success';
+                    taskItem.innerHTML = `
+                        <div>${task.text}</div>
+                        ${task.image ? `<img src="${task.image}" class="task-image" alt="Task image">` : ''}
+                        <button class="btn btn-sm btn-outline-success mt-2 add-photo">Add Photo</button>
+                    `;
+                    
+                    const addPhotoBtn = taskItem.querySelector('.add-photo');
+                    addPhotoBtn.onclick = function() {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = function(e) {
+                            const file = e.target.files[0];
+                            const reader = new FileReader();
+                            reader.onload = function(event) {
+                                task.image = event.target.result;
+                                saveTasks();
+                                renderTimeline();
+                            };
+                            reader.readAsDataURL(file);
+                        };
+                        input.click();
+                    };
+                    
+                    taskList.appendChild(taskItem);
+                });
+            }
+
+            const addTask = document.createElement('li');
+            addTask.className = 'list-group-item bg-dark text-success add-task';
+            addTask.textContent = '+ Add Task';
+            addTask.onclick = function() {
+                const taskText = prompt('Enter a new task:');
+                if (taskText) {
+                    if (!tasks[dateString]) {
+                        tasks[dateString] = [];
+                    }
+                    tasks[dateString].push({ text: taskText });
+                    saveTasks();
+                    renderTimeline();
+                }
+            };
+
+            content.appendChild(dateElement);
+            content.appendChild(taskList);
+            taskList.appendChild(addTask);
+            container.appendChild(content);
+            return container;
+        }
+
+        function renderTimeline() {
+            timeline.innerHTML = '';
+            let isEven = true;
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                const item = createTimelineItem(d, isEven);
+                timeline.appendChild(item);
+                isEven = !isEven;
+            }
+        }
+
+        renderTimeline();
+    </script>
+</body>
+</html>
